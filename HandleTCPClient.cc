@@ -2,8 +2,8 @@
 
 #include "HandleTCPClient.h"
 #include "DieWithMessage.h"
+#include "bufsize.h"
 
-#define BUFSIZE 256
 
 void HandleTCPClient(int clntSocket) {
   char buffer[BUFSIZE];

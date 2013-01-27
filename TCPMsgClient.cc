@@ -24,15 +24,18 @@
 #include <arpa/inet.h>
 #include "DieWithMessage.h"
 #include "bufsize.h"
+#include "prompt.h"
+
+using namespace std;
 
 int g_argc;
 char **g_argv;
 
-void GetArgs(char **servIP, char **echoString, in_port_t *servPort)
+void GetArgs(char **servIP, in_port_t *servPort)
 {
   char *port;
 
-  if (g_argc < 3 || g_argc > 4)
+  if (g_argc < 2 || g_argc > 3)
   {
     DieWithUserMessage("Parameter(s)",
 		       "<Server Address> <Echo Word> [<Server Port>]");
@@ -40,26 +43,25 @@ void GetArgs(char **servIP, char **echoString, in_port_t *servPort)
   }
 
   *servIP = g_argv[1];
-  *echoString = g_argv[2];
-  *servPort = (g_argc == 4) ? atoi(g_argv[3]) : 7;
+  *servPort = (g_argc == 3) ? atoi(g_argv[2]) : 7;
 }
 
 int main(int argc, char *argv[])
 {
   char *servIP;
-  char *echoString;
   in_port_t servPort;
   struct sockaddr_in servAddr;
-  char buffer[BUFSIZE];
-  size_t echoStringLen;
+  char msg[BUFSIZE];
+  size_t msgLen;
   ssize_t numBytes;
   unsigned int totalBytesRcvd;
   int clientSock;
 
+
   g_argc = argc;
   g_argv = argv;
 
-  GetArgs(&servIP, &echoString, &servPort);
+  GetArgs(&servIP, &servPort);
 
   clientSock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
@@ -81,32 +83,20 @@ int main(int argc, char *argv[])
       < 0)
     DieWithSystemMessage("connect() failed");
 
-  echoStringLen = strlen(echoString);
-  numBytes = send(clientSock, echoString, echoStringLen, 0);
+  do
+  {
+    fputs(prompt, stdout);
+    fgets(msg, 256, stdin);
 
-  if (numBytes < 0)
-    DieWithSystemMessage("send() failed");
-  else if (numBytes != static_cast<size_t>(echoStringLen))
-    DieWithUserMessage("send()", "sent unexpected number of bytes");
-
-  totalBytesRcvd = 0;
-  fputs("Received: ", stdout);
-
-  while (totalBytesRcvd < echoStringLen) {
-    numBytes = recv(clientSock, buffer, BUFSIZE - 1, 0);
+    msgLen = strlen(msg);
+    numBytes = send(clientSock, msg, msgLen, 0);
 
     if (numBytes < 0)
-      DieWithSystemMessage("recv() failed");
-    else if (numBytes == 0)
-      DieWithUserMessage("recv()", "connection closed prematurely");
+      DieWithSystemMessage("send() failed");
+    else if (numBytes != static_cast<size_t>(msgLen))
+      DieWithUserMessage("send()", "sent unexpected number of bytes");
+  } while (strcmp(msg, "quit\n") != 0);
 
-    totalBytesRcvd += numBytes;
-    buffer[numBytes] = '\0';
-
-    fputs(buffer, stdout);
-  }
-
-  fputc('\n', stdout);
   close(clientSock);
   return 0;
 }
