@@ -13,38 +13,25 @@ void HandleMsg(int clntSocket) {
   char *ptr;
   int i;
 
-  do {
-    numBytesRcvdOld = 0;
-    numBytesRcvd = recv(clntSocket, buffer, BUFSIZE, 0);
+  numBytesRcvdOld = 0;
+
+  while((numBytesRcvd = recv(clntSocket, buffer, BUFSIZE - 1, 0)) > 0
+	&& (numBytesRcvd != numBytesRcvdOld))
+  {
     strncpy(msg, buffer, BUFSIZE - 1);
-    msg[BUFSIZE] = '\0';
+    msg[BUFSIZE - 1] = '\0';
 
     if (numBytesRcvd < 0)
       DieWithSystemMessage("recv() failed");
 
     ptr = strchr(msg, '\n');
-    i = (ptr - msg) < BUFSIZE ? ptr - msg : BUFSIZE - 1;
+    i = (ptr - msg) < BUFSIZE - 1? ptr - msg : BUFSIZE - 2;
     msg[i + 1] = '\0';
     printf("%s", msg);
-
-    while (numBytesRcvd > numBytesRcvdOld)
-    {
-      numBytesRcvdOld = numBytesRcvd;
-      numBytesRcvd = recv(clntSocket, buffer, BUFSIZE, 0);
-      strncpy(msg, buffer, BUFSIZE - 1);
-      msg[BUFSIZE] = '\0';
-
-      if (numBytesRcvd < 0)
-	DieWithSystemMessage("recv() failed");
-
-      ptr = strchr(msg, '\n');
-      i = (ptr - msg) < BUFSIZE ? ptr - msg : BUFSIZE - 1;
-      msg[i + 1] = '\0';
-      printf("%s", msg);
-    }
-
-    numBytesRcvdOld = 0;
-  } while (numBytesRcvd > 0);
+    buffer[0] = '\0';
+    msg[0] = '\0';
+  }
 
   close(clntSocket);
+  puts("***Client Disconnected***");
 }

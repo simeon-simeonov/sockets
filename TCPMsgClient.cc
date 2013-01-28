@@ -83,19 +83,25 @@ int main(int argc, char *argv[])
       < 0)
     DieWithSystemMessage("connect() failed");
 
+  char *test;
+
   do
   {
     fputs(prompt, stdout);
-    fgets(msg, 256, stdin);
+    do
+    {
+      test = fgets(msg, BUFSIZE, stdin);
+      msgLen = strlen(msg);
+      numBytes = send(clientSock, msg, msgLen, 0);
 
-    msgLen = strlen(msg);
-    numBytes = send(clientSock, msg, msgLen, 0);
-
-    if (numBytes < 0)
-      DieWithSystemMessage("send() failed");
-    else if (numBytes != static_cast<size_t>(msgLen))
-      DieWithUserMessage("send()", "sent unexpected number of bytes");
-  } while (strcmp(msg, "quit\n") != 0);
+      if (numBytes < 0)
+	DieWithSystemMessage("send() failed");
+      else if (numBytes != (size_t)msgLen)
+	DieWithUserMessage("send()", "sent unexpected number of bytes");
+    } while(test
+	    && strlen(msg) == BUFSIZE - 1
+	    && msg[BUFSIZE - 2] != '\n');
+  } while (true);
 
   close(clientSock);
   return 0;
